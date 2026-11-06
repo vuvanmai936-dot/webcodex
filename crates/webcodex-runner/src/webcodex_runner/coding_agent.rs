@@ -867,6 +867,11 @@ mod run;
 mod setup;
 mod store;
 
+// Experimental ACP metadata archive: build and exercise in Runner tests only.
+// No production event capture, persistence or observation behavior is changed.
+#[cfg(test)]
+mod evidence;
+
 use store::{DurableDispatchPhase, DurableRunRecord, DurableRunStore, STORE_SCHEMA_VERSION};
 
 #[cfg(test)]
