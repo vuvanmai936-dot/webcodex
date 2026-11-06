@@ -8,7 +8,7 @@
 //!   rustc --edition=2021 --test evidence.rs -o /tmp/acp-evidence-tests
 //!   /tmp/acp-evidence-tests
 use std::fs::{self, File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::Write;
 use std::path::{Path, PathBuf};
 
 const MAX_EVENTS: u64 = 512;
@@ -248,13 +248,16 @@ impl Archive {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    static NEXT_FIXTURE: AtomicU64 = AtomicU64::new(0);
 
     struct Fixture(PathBuf);
     impl Fixture {
         fn new() -> Self {
             let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
-            let root = std::env::temp_dir().join(format!("wc-acp-metadata-{}-{nanos}", std::process::id()));
+            let root = std::env::temp_dir().join(format!("wc-acp-metadata-{}-{nanos}-{}", std::process::id(), NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed)));
             Self(root)
         }
         fn archive(&self) -> Archive {
