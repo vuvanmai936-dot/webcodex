@@ -411,8 +411,15 @@ mod tests {
     #[test]
     fn canonical_coding_agent_event_kinds_match_core_contract() {
         for kind in [
-            "agent_message", "reasoning", "plan", "tool_activity", "file_change",
-            "terminal_activity", "usage", "permission_request", "terminal",
+            "agent_message",
+            "reasoning",
+            "plan",
+            "tool_activity",
+            "file_change",
+            "terminal_activity",
+            "usage",
+            "permission_request",
+            "terminal",
         ] {
             assert!(allowed_kind(kind), "unrecognized canonical kind: {kind}");
         }
