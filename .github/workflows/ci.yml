@@ -1065,6 +1065,6 @@ jobs:
       - name: Compile isolated ACP metadata evidence Rust tests
         run: |
           rustc --version
-          rustc --edition=2021 --test experiments/acp-event-evidence/rust/evidence.rs -o "$RUNNER_TEMP/acp-evidence-tests"
+          rustc --edition=2021 --test crates/webcodex-runner/src/webcodex_runner/coding_agent/evidence.rs -o "$RUNNER_TEMP/acp-evidence-tests"
       - name: Execute isolated ACP metadata evidence Rust tests
         run: "$RUNNER_TEMP/acp-evidence-tests" --nocapture
