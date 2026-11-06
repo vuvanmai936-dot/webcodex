@@ -57,7 +57,15 @@ fn allowed_identity(s: &str) -> bool {
 fn allowed_kind(s: &str) -> bool {
     matches!(
         s,
-        "agent_message" | "tool_call" | "tool_update" | "usage" | "terminal"
+        "agent_message"
+            | "reasoning"
+            | "plan"
+            | "tool_activity"
+            | "file_change"
+            | "terminal_activity"
+            | "usage"
+            | "permission_request"
+            | "terminal"
     )
 }
 
@@ -398,6 +406,18 @@ mod tests {
             ),
             Err(EvidenceError::IdentityMismatch)
         ));
+    }
+
+    #[test]
+    fn canonical_coding_agent_event_kinds_match_core_contract() {
+        for kind in [
+            "agent_message", "reasoning", "plan", "tool_activity", "file_change",
+            "terminal_activity", "usage", "permission_request", "terminal",
+        ] {
+            assert!(allowed_kind(kind), "unrecognized canonical kind: {kind}");
+        }
+        assert!(!allowed_kind("tool_call"));
+        assert!(!allowed_kind("tool_update"));
     }
 
     #[test]
