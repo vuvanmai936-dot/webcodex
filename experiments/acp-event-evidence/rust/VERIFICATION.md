@@ -67,3 +67,10 @@ The candidate file is now present at `crates/webcodex-runner/src/webcodex_runner
 GitHub Actions: fork-only Draft PR #1 was opened to expose CI. One earlier fork CI run failed a workflow-security policy because the new test workflow had used an unpinned `actions/checkout@v4`; corrected to pinned commit `11d5960a326750d5838078e36cf38b85af677262`. The old failed run must not be claimed green; the latest-head CI result has not yet been confirmed.
 
 **Next stop/go:** test full Runner Cargo workspace against this head, then independent review of authorization, retention, Windows replacement and source-body privacy. Until those gates are met, the module remains test-only, and the prototype does not recover full ACP event bodies.
+
+## Isolated Cargo module build — final additional gate
+
+- Job `wc_job_kGFEkrM_9HSMLlS2`: actual `cargo test --offline` with `RUSTFLAGS=-Dwarnings` in a temporary zero-dependency Rust crate. The crate reproduced the real nested test module layout and used the exact GitHub source copied from `crates/webcodex-runner/src/webcodex_runner/coding_agent/evidence.rs`. **7/7 tests passed; exit 0.** This is a Cargo build of a representative module harness, **not** a full `webcodex-runner` workspace build.
+- The original Rust candidate module is now referenced through `#[cfg(all(test, unix))]` in the actual research-branch `coding_agent.rs`; production binary behavior is unchanged. Windows test compilation is gated off pending proper atomic replacement implementation.
+- The temporary GitHub Actions workflow and extra existing-CI job were removed from the research branch after discovering the platform's full CI was unnecessarily broad. `.github/workflows/ci.yml` was restored byte-for-byte to fork `main`. Historical failing CI (unpinned action) remains a real past failure but no longer appears in the current diff.
+- **Outstanding independent gates:** full fork-head `cargo test -p webcodex-runner`/CI, authenticated/retained production storage design, and actual Codex ACP event archive delivery and restart tests.
