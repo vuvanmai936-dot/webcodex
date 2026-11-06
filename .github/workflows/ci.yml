@@ -1052,19 +1052,3 @@ jobs:
             echo "Server image lane expected $expected_docker, got $DOCKER_RESULT" >&2
             exit 1
           fi
-
-  acp-evidence-standalone:
-    # Research-fork validation only; no production Runner wiring or credentials.
-    if: ${{ github.event_name == 'pull_request' && github.head_ref == 'research/acp-event-evidence-20261106' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 6
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-      - name: Compile isolated ACP metadata evidence Rust tests
-        run: |
-          rustc --version
-          rustc --edition=2021 --test crates/webcodex-runner/src/webcodex_runner/coding_agent/evidence.rs -o "$RUNNER_TEMP/acp-evidence-tests"
-      - name: Execute isolated ACP metadata evidence Rust tests
-        run: "$RUNNER_TEMP/acp-evidence-tests" --nocapture
