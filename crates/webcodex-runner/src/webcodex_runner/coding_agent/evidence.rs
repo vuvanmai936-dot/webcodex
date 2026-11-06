@@ -342,6 +342,7 @@ mod tests {
         loop {
             let page = reopened.page(cursor, 64).unwrap();
             assert!(!page.body_recoverable);
+            assert_eq!(page.committed_through, 300);
             sequences.extend(page.events.iter().map(|event| event.sequence));
             cursor = page.next_sequence;
             if !page.has_more {
