@@ -7,6 +7,12 @@ on:
     paths:
       - 'experiments/acp-event-evidence/rust/**'
       - '.github/workflows/acp-evidence-prototype.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'experiments/acp-event-evidence/rust/**'
+      - '.github/workflows/acp-evidence-prototype.yml'
   workflow_dispatch:
 
 permissions:
