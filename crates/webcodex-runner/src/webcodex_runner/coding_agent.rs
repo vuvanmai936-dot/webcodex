@@ -867,6 +867,12 @@ mod run;
 mod setup;
 mod store;
 
+// Experimental ACP metadata archive: compile in Unix Runner tests only.
+// Windows atomic replace policy remains unimplemented; no production event
+// capture, persistence or observation behavior is changed.
+#[cfg(all(test, unix))]
+mod evidence;
+
 use store::{DurableDispatchPhase, DurableRunRecord, DurableRunStore, STORE_SCHEMA_VERSION};
 
 #[cfg(test)]
