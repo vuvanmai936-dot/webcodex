@@ -27,6 +27,6 @@ jobs:
       - name: Show rustc identity
         run: rustc --version
       - name: Compile standalone Rust test binary
-        run: rustc --edition=2021 --test experiments/acp-event-evidence/rust/evidence.rs -o "$RUNNER_TEMP/acp-evidence-tests"
+        run: rustc --edition=2021 --test crates/webcodex-runner/src/webcodex_runner/coding_agent/evidence.rs -o "$RUNNER_TEMP/acp-evidence-tests"
       - name: Run actual tests
         run: "$RUNNER_TEMP/acp-evidence-tests" --nocapture
