@@ -50,11 +50,15 @@ pub struct Archive {
 fn allowed_identity(s: &str) -> bool {
     !s.is_empty()
         && s.len() <= 128
-        && s.bytes().all(|b| b.is_ascii_alphanumeric() || b"_:-".contains(&b))
+        && s.bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"_:-".contains(&b))
 }
 
 fn allowed_kind(s: &str) -> bool {
-    matches!(s, "agent_message" | "tool_call" | "tool_update" | "usage" | "terminal")
+    matches!(
+        s,
+        "agent_message" | "tool_call" | "tool_update" | "usage" | "terminal"
+    )
 }
 
 // CRC32 guards against accidental corruption, not intentional tampering.
@@ -64,7 +68,11 @@ fn crc32(bytes: &[u8]) -> u32 {
     for &byte in bytes {
         crc ^= byte as u32;
         for _ in 0..8 {
-            crc = if crc & 1 != 0 { (crc >> 1) ^ 0xedb88320 } else { crc >> 1 };
+            crc = if crc & 1 != 0 {
+                (crc >> 1) ^ 0xedb88320
+            } else {
+                crc >> 1
+            };
         }
     }
     !crc
@@ -73,7 +81,9 @@ fn crc32(bytes: &[u8]) -> u32 {
 fn sync_dir(path: &Path) -> Result<(), EvidenceError> {
     #[cfg(unix)]
     {
-        File::open(path).and_then(|f| f.sync_all()).map_err(|_| EvidenceError::Io)
+        File::open(path)
+            .and_then(|f| f.sync_all())
+            .map_err(|_| EvidenceError::Io)
     }
     #[cfg(not(unix))]
     {
@@ -89,9 +99,13 @@ fn publish(path: &Path, bytes: &[u8]) -> Result<(), EvidenceError> {
         return Err(EvidenceError::IncompleteOrCorrupt);
     }
     let result = (|| {
-        let mut file = OpenOptions::new().write(true).create_new(true).open(&tmp)
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&tmp)
             .map_err(|_| EvidenceError::Io)?;
-        file.write_all(bytes).and_then(|_| file.sync_all())
+        file.write_all(bytes)
+            .and_then(|_| file.sync_all())
             .map_err(|_| EvidenceError::Io)?;
         drop(file);
         fs::rename(&tmp, path).map_err(|_| EvidenceError::Io)?;
@@ -104,7 +118,12 @@ fn publish(path: &Path, bytes: &[u8]) -> Result<(), EvidenceError> {
 }
 
 impl Archive {
-    pub fn new(root: PathBuf, run: &str, project: &str, authority: &str) -> Result<Self, EvidenceError> {
+    pub fn new(
+        root: PathBuf,
+        run: &str,
+        project: &str,
+        authority: &str,
+    ) -> Result<Self, EvidenceError> {
         if !allowed_identity(run) || !allowed_identity(project) || !allowed_identity(authority) {
             return Err(EvidenceError::InvalidInput);
         }
@@ -113,7 +132,8 @@ impl Archive {
         }
         fs::create_dir_all(&root).map_err(|_| EvidenceError::Io)?;
         let archive = Self {
-            root, identity: format!("{VERSION}\n{run}\n{project}\n{authority}\n"),
+            root,
+            identity: format!("{VERSION}\n{run}\n{project}\n{authority}\n"),
         };
         archive.inspect()?;
         Ok(archive)
@@ -140,7 +160,9 @@ impl Archive {
             return Ok(Vec::new());
         }
         let text = fs::read_to_string(&manifest).map_err(|_| EvidenceError::IncompleteOrCorrupt)?;
-        let (identity, entries) = text.split_once("--\n").ok_or(EvidenceError::IncompleteOrCorrupt)?;
+        let (identity, entries) = text
+            .split_once("--\n")
+            .ok_or(EvidenceError::IncompleteOrCorrupt)?;
         if format!("{identity}--\n") != format!("{}--\n", self.identity) {
             return Err(EvidenceError::IdentityMismatch);
         }
@@ -154,7 +176,9 @@ impl Archive {
             if fields.len() != 3 {
                 return Err(EvidenceError::IncompleteOrCorrupt);
             }
-            let sequence = fields[0].parse::<u64>().map_err(|_| EvidenceError::IncompleteOrCorrupt)?;
+            let sequence = fields[0]
+                .parse::<u64>()
+                .map_err(|_| EvidenceError::IncompleteOrCorrupt)?;
             let kind = fields[1];
             let expected = u32::from_str_radix(fields[2], 16)
                 .map_err(|_| EvidenceError::IncompleteOrCorrupt)?;
@@ -184,8 +208,12 @@ impl Archive {
         if actual_files.len() != expected_files
             || actual_files.iter().any(|item| {
                 let path = item.path();
-                if path == manifest { return false; }
-                !parsed.iter().any(|(sequence, _, _)| path == self.segment(*sequence))
+                if path == manifest {
+                    return false;
+                }
+                !parsed
+                    .iter()
+                    .any(|(sequence, _, _)| path == self.segment(*sequence))
             })
         {
             return Err(EvidenceError::IncompleteOrCorrupt);
@@ -205,7 +233,10 @@ impl Archive {
             return Err(EvidenceError::QuotaExceeded);
         }
         let content = format!("{sequence}\t{kind}\n");
-        let used: u64 = previous.iter().map(|(seq, k, _)| format!("{seq}\t{k}\n").len() as u64).sum();
+        let used: u64 = previous
+            .iter()
+            .map(|(seq, k, _)| format!("{seq}\t{k}\n").len() as u64)
+            .sum();
         if used + content.len() as u64 > MAX_BYTES {
             return Err(EvidenceError::QuotaExceeded);
         }
@@ -219,7 +250,10 @@ impl Archive {
         for (seq, k, digest) in previous {
             manifest.push_str(&format!("{seq}\t{k}\t{digest:08x}\n"));
         }
-        manifest.push_str(&format!("{sequence}\t{kind}\t{:08x}\n", crc32(content.as_bytes())));
+        manifest.push_str(&format!(
+            "{sequence}\t{kind}\t{:08x}\n",
+            crc32(content.as_bytes())
+        ));
         publish(&self.manifest(), manifest.as_bytes())
     }
 
@@ -232,13 +266,17 @@ impl Archive {
         if after > high {
             return Err(EvidenceError::InvalidInput);
         }
-        let events: Vec<Evidence> = entries.into_iter()
-            .skip(after as usize).take(limit as usize)
+        let events: Vec<Evidence> = entries
+            .into_iter()
+            .skip(after as usize)
+            .take(limit as usize)
             .map(|(sequence, kind, _)| Evidence { sequence, kind })
             .collect();
         let next_sequence = events.last().map_or(after, |event| event.sequence);
         Ok(Page {
-            events, committed_through: high, next_sequence,
+            events,
+            committed_through: high,
+            next_sequence,
             has_more: next_sequence < high,
             body_recoverable: false,
         })
@@ -256,16 +294,31 @@ mod tests {
     struct Fixture(PathBuf);
     impl Fixture {
         fn new() -> Self {
-            let nanos = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos();
-            let root = std::env::temp_dir().join(format!("wc-acp-metadata-{}-{nanos}-{}", std::process::id(), NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed)));
+            let nanos = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_nanos();
+            let root = std::env::temp_dir().join(format!(
+                "wc-acp-metadata-{}-{nanos}-{}",
+                std::process::id(),
+                NEXT_FIXTURE.fetch_add(1, Ordering::Relaxed)
+            ));
             Self(root)
         }
         fn archive(&self) -> Archive {
-            Archive::new(self.0.clone(), "wc_agent_run_test", "project-test", "authority-test").unwrap()
+            Archive::new(
+                self.0.clone(),
+                "wc_agent_run_test",
+                "project-test",
+                "authority-test",
+            )
+            .unwrap()
         }
     }
     impl Drop for Fixture {
-        fn drop(&mut self) { let _ = fs::remove_dir_all(&self.0); }
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.0);
+        }
     }
 
     #[test]
@@ -283,7 +336,9 @@ mod tests {
             assert!(!page.body_recoverable);
             sequences.extend(page.events.iter().map(|event| event.sequence));
             cursor = page.next_sequence;
-            if !page.has_more { break; }
+            if !page.has_more {
+                break;
+            }
         }
         assert_eq!(sequences, (1..=300).collect::<Vec<_>>());
     }
@@ -292,10 +347,19 @@ mod tests {
     fn refuses_gaps_and_duplicates() {
         let fixture = Fixture::new();
         let archive = fixture.archive();
-        assert_eq!(archive.append(2, "terminal"), Err(EvidenceError::GapOrDuplicate));
+        assert_eq!(
+            archive.append(2, "terminal"),
+            Err(EvidenceError::GapOrDuplicate)
+        );
         archive.append(1, "terminal").unwrap();
-        assert_eq!(archive.append(1, "terminal"), Err(EvidenceError::GapOrDuplicate));
-        assert_eq!(archive.append(3, "terminal"), Err(EvidenceError::GapOrDuplicate));
+        assert_eq!(
+            archive.append(1, "terminal"),
+            Err(EvidenceError::GapOrDuplicate)
+        );
+        assert_eq!(
+            archive.append(3, "terminal"),
+            Err(EvidenceError::GapOrDuplicate)
+        );
     }
 
     #[test]
@@ -304,7 +368,10 @@ mod tests {
         let archive = fixture.archive();
         archive.append(1, "terminal").unwrap();
         fs::write(archive.segment(1), b"wrong\n").unwrap();
-        assert!(matches!(archive.page(0, 64), Err(EvidenceError::IncompleteOrCorrupt)));
+        assert!(matches!(
+            archive.page(0, 64),
+            Err(EvidenceError::IncompleteOrCorrupt)
+        ));
     }
 
     #[test]
@@ -312,7 +379,10 @@ mod tests {
         let fixture = Fixture::new();
         let archive = fixture.archive();
         fs::write(archive.segment(1), b"1\tterminal\n").unwrap();
-        assert!(matches!(archive.page(0, 64), Err(EvidenceError::IncompleteOrCorrupt)));
+        assert!(matches!(
+            archive.page(0, 64),
+            Err(EvidenceError::IncompleteOrCorrupt)
+        ));
     }
 
     #[test]
@@ -320,7 +390,12 @@ mod tests {
         let fixture = Fixture::new();
         fixture.archive().append(1, "terminal").unwrap();
         assert!(matches!(
-            Archive::new(fixture.0.clone(), "wc_agent_run_test", "project-test", "other"),
+            Archive::new(
+                fixture.0.clone(),
+                "wc_agent_run_test",
+                "project-test",
+                "other"
+            ),
             Err(EvidenceError::IdentityMismatch)
         ));
     }
@@ -330,7 +405,13 @@ mod tests {
         let fixture = Fixture::new();
         let archive = fixture.archive();
         archive.append(1, "terminal").unwrap();
-        assert!(matches!(archive.page(2, 1), Err(EvidenceError::InvalidInput)));
-        assert!(matches!(archive.page(0, 65), Err(EvidenceError::InvalidInput)));
+        assert!(matches!(
+            archive.page(2, 1),
+            Err(EvidenceError::InvalidInput)
+        ));
+        assert!(matches!(
+            archive.page(0, 65),
+            Err(EvidenceError::InvalidInput)
+        ));
     }
 }
