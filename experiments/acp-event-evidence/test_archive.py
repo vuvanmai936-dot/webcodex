@@ -75,6 +75,28 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaises(Error):
             self.archive()
 
+    def test_missing_committed_segment_is_rejected(self):
+        a = self.archive()
+        a.append(1, "terminal")
+        (self.root / "00000001.json").unlink()
+        with self.assertRaises(Error):
+            self.archive()
+
+    def test_root_symlink_is_rejected(self):
+        other = Path(self.temp.name) / "alternate"
+        other.mkdir()
+        link = Path(self.temp.name) / "link"
+        link.symlink_to(other, target_is_directory=True)
+        with self.assertRaises(Error):
+            Archive(link, *self.args)
+
+    def test_uncommitted_extra_file_after_manifest_is_rejected(self):
+        a = self.archive()
+        a.append(1, "terminal")
+        (self.root / "00000002.json").write_text('{"sequence":2,"kind":"terminal"}\\n')
+        with self.assertRaises(Error):
+            self.archive()
+
     def test_identity_mismatch_and_invalid_cursor(self):
         a = self.archive()
         a.append(1, "terminal")
