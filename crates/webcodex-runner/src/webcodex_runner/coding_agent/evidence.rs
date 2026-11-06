@@ -428,7 +428,6 @@ mod tests {
         assert!(!allowed_kind("tool_update"));
     }
 
-
     #[test]
     fn rust_archive_child_read() {
         let Ok(root) = std::env::var("WC_ACP_EVIDENCE_CHILD_ROOT") else {
