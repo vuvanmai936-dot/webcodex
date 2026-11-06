@@ -50,3 +50,20 @@ Before any Runner integration:
 5. Avoid changing the current Run pre-prompt dispatch barrier, event cursor protocol or default 256-event ring.
 
 No upstream Issue or PR, no production configuration change, and no main-branch modification were performed.
+
+
+## Follow-up verified results — 2026-11-06 (current)
+
+The earlier "Rust not compiled" statement above is a **historical status**, superseded by these actual Runner-managed macOS executions. The Rust compiler and formatter were located at `~/.cargo/bin/rustc` and `~/.cargo/bin/rustfmt` (not present on the restricted default PATH). No installation or production configuration change occurred.
+
+- Job `wc_job_Jm-SF55_PftRCTDG`: the first *parallel* Rust compile succeeded, 4/6 unit tests passed and 2 failed (test fixture directory collision).
+- Job `wc_job_jcJq-JQhFiLukWQC`: serial control passed 6/6, confirming an interference-sensitive fixture.
+- Job `wc_job_iY2wmU8gBQAsMYdR`: fixture isolation fix, `rustc --test -Dwarnings` succeeded and parallel 6/6 passed.
+- Job `wc_job_K3zPQMyfWsq5RMEx`: canonical `CodingAgentEventKind` vocabulary, `rustfmt --check` and `rustc -Dwarnings` succeeded; parallel 7/7 passed.
+- Job `wc_job_jkUoRHVzssUFjTE8`: created a matching nested module layout (`lib.rs -> coding_agent.rs -> coding_agent/evidence.rs`) in an isolated temporary directory; `rustfmt --check` and `rustc --test -Dwarnings` succeeded; **7/7 nested module tests passed**. This validates Rust module linkage shape, **not** the complete WebCodex Cargo workspace.
+
+The candidate file is now present at `crates/webcodex-runner/src/webcodex_runner/coding_agent/evidence.rs` and included by `coding_agent.rs` with `#[cfg(all(test, unix))] mod evidence;`. Thus the default production Runner has **no** new archive behavior. Windows is deliberately excluded because the candidate's `std::fs::rename` replacement logic lacks the Runner's Windows atomic-publish implementation. The full `cargo test -p webcodex-runner` on this updated fork checkout is **not yet evidenced**; a genuine existing Rust workspace checkout and full CI result remain a separate gate.
+
+GitHub Actions: fork-only Draft PR #1 was opened to expose CI. One earlier fork CI run failed a workflow-security policy because the new test workflow had used an unpinned `actions/checkout@v4`; corrected to pinned commit `11d5960a326750d5838078e36cf38b85af677262`. The old failed run must not be claimed green; the latest-head CI result has not yet been confirmed.
+
+**Next stop/go:** test full Runner Cargo workspace against this head, then independent review of authorization, retention, Windows replacement and source-body privacy. Until those gates are met, the module remains test-only, and the prototype does not recover full ACP event bodies.
