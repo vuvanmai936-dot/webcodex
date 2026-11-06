@@ -40,6 +40,41 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(seen, list(range(1, 301)))
         self.assertEqual(page["committed_through"], 300)
 
+    def test_fresh_python_process_recovers_committed_metadata(self):
+        import json
+        import subprocess
+        import sys
+
+        a = self.archive()
+        for i in range(1, 301):
+            a.append(i, "usage")
+        reader = """
+import importlib.util, json, pathlib, sys
+spec = importlib.util.spec_from_file_location("separate_archive", sys.argv[1])
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+archive = mod.EvidenceArchive(pathlib.Path(sys.argv[2]), *sys.argv[3:])
+cursor, seen = 0, []
+while True:
+    page = archive.page(cursor, 64)
+    seen.extend(e["sequence"] for e in page["events"])
+    cursor = page["next_sequence"]
+    if not page["has_more"]:
+        break
+print(json.dumps({"sequences": seen, "body_recoverable": page["body_recoverable"]}))
+"""
+        result = subprocess.run(
+            [
+                sys.executable, "-B", "-c", reader,
+                str(Path(__file__).with_name("archive.py")),
+                str(self.root), *self.args,
+            ],
+            check=True, capture_output=True, text=True, timeout=20,
+        )
+        data = json.loads(result.stdout)
+        self.assertEqual(data["sequences"], list(range(1, 301)))
+        self.assertFalse(data["body_recoverable"])
+
     def test_gap_duplicate_and_quota_fail_closed(self):
         a = self.archive()
         with self.assertRaises(Error):
