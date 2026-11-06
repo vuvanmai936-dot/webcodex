@@ -428,6 +428,73 @@ mod tests {
         assert!(!allowed_kind("tool_update"));
     }
 
+
+    #[test]
+    fn rust_archive_child_read() {
+        let Ok(root) = std::env::var("WC_ACP_EVIDENCE_CHILD_ROOT") else {
+            return;
+        };
+        let archive = Archive::new(
+            PathBuf::from(root),
+            "wc_agent_run_test",
+            "project-test",
+            "authority-test",
+        )
+        .unwrap();
+        let mut cursor = 0;
+        let mut count = 0;
+        loop {
+            let page = archive.page(cursor, 64).unwrap();
+            assert!(!page.body_recoverable);
+            assert_eq!(page.committed_through, 300);
+            count += page.events.len();
+            cursor = page.next_sequence;
+            if !page.has_more {
+                break;
+            }
+        }
+        assert_eq!(count, 300);
+        assert_eq!(cursor, 300);
+    }
+
+    #[test]
+    fn three_hundred_events_recover_in_fresh_process() {
+        let fixture = Fixture::new();
+        let archive = fixture.archive();
+        for sequence in 1..=300 {
+            archive.append(sequence, "tool_activity").unwrap();
+        }
+        let output = std::process::Command::new(std::env::current_exe().unwrap())
+            .arg("rust_archive_child_read")
+            .arg("--nocapture")
+            .env("WC_ACP_EVIDENCE_CHILD_ROOT", &fixture.0)
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "fresh process failed: {}",
+            String::from_utf8_lossy(&output.stdout)
+        );
+        assert!(
+            String::from_utf8_lossy(&output.stdout).contains("1 passed"),
+            "fresh process did not execute child probe"
+        );
+    }
+
+    #[test]
+    fn missing_middle_segment_never_claims_completeness() {
+        let fixture = Fixture::new();
+        let archive = fixture.archive();
+        for sequence in 1..=3 {
+            archive.append(sequence, "terminal_activity").unwrap();
+        }
+        fs::remove_file(archive.segment(2)).unwrap();
+        assert!(matches!(
+            archive.page(0, 64),
+            Err(EvidenceError::IncompleteOrCorrupt)
+        ));
+    }
+
     #[test]
     fn invalid_cursor_is_rejected() {
         let fixture = Fixture::new();
